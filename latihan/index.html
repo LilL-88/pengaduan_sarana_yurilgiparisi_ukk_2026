@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>game mantap</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-cyber: #020205;
+            --accent-cyber: #00f0ff;
+            --accent-cyber-bg: rgba(0, 240, 255, 0.1);
+            --accent-cyber-dim: rgba(0, 240, 255, 0.25);
+            --panel-cyber: rgba(5, 5, 12, 0.9);
+            --border-cyber: rgba(0, 240, 255, 0.3);
+            
+            --bg-sweet: #fff4f7;
+            --accent-sweet: #ff477e;
+            --accent-sweet-bg: rgba(255, 71, 126, 0.1);
+            --accent-sweet-dim: rgba(255, 71, 126, 0.25);
+            --panel-sweet: rgba(255, 255, 255, 0.95);
+            --border-sweet: rgba(255, 71, 126, 0.35);
+            
+            --neon-glow: 0 0 25px rgba(0, 240, 255, 0.6), 0 0 50px rgba(0, 240, 255, 0.2);
+            --sweet-glow: 0 15px 35px rgba(255, 71, 126, 0.15), 0 0 20px rgba(255, 71, 126, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-cyber);
+            border-radius: 10px;
+        }
+        body.theme-sweet-active ::-webkit-scrollbar-thumb {
+            background: var(--accent-sweet);
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+            background-color: var(--bg-cyber);
+            color: #ffffff;
+            transition: background 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.theme-sweet-active {
+            background-color: var(--bg-sweet);
+            color: #1f2029;
+        }
+
+        .system-scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 999; pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 4px, 6px 100%;
+            opacity: 0.8;
+        }
+        body.theme-sweet-active .system-scanlines { display: none; }
+
+        .audio-controller-node {
+            position: fixed; top: 30px; left: 30px; z-index: 1000;
+            display: flex; align-items: flex-end; gap: 4px; height: 24px; cursor: pointer;
+            padding: 5px; background: rgba(0,0,0,0.3); border-radius: 6px;
+        }
+        .visualizer-bar {
+            width: 3px; height: 100%; background: var(--accent-cyber);
+            transform-origin: bottom; transform: scaleY(0.15);
+            transition: transform 0.2s, background 0.5s;
+        }
+        .audio-controller-node.playing .visualizer-bar {
+            animation: bounceVisualizer 0.5s ease infinite alternate;
+        }
+        .audio-controller-node.playing .visualizer-bar:nth-child(2) { animation-delay: 0.1s; animation-duration: 0.4s; }
+        .audio-controller-node.playing .visualizer-bar:nth-child(3) { animation-delay: 0.25s; animation-duration: 0.6s; }
+        .audio-controller-node.playing .visualizer-bar:nth-child(4) { animation-delay: 0.15s; animation-duration: 0.35s; }
+        body.theme-sweet-active .visualizer-bar { background: var(--accent-sweet); }
+
+        @keyframes bounceVisualizer {
+            0% { transform: scaleY(0.15); }
+            100% { transform: scaleY(1); }
+        }
+
+        .hardware-mute-btn {
+            position: fixed; top: 25px; right: 30px; z-index: 1000;
+            background: rgba(10, 10, 25, 0.6); border: 1px solid var(--border-cyber);
+            color: var(--accent-cyber); width: 45px; height: 45px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+            cursor: pointer; backdrop-filter: blur(8px); transition: all 0.3s;
+        }
+        body.theme-sweet-active .hardware-mute-btn {
+            background: rgba(255,255,255,0.8); border: 1px solid var(--border-sweet);
+            color: var(--accent-sweet); box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        #matrix-rain-core, #particle-ambient-core {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+        }
+        #matrix-rain-core { z-index: 1; opacity: 0.12; }
+        #particle-ambient-core { z-index: 2; }
+        body.theme-sweet-active #matrix-rain-core { opacity: 0; }
+
+        .cinematic-backdrop-viewport {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 3; pointer-events: none; opacity: 0.05;
+            transition: opacity 2s ease;
+        }
+        body.theme-sweet-active .cinematic-backdrop-viewport { opacity: 0.38; }
+
+        .backdrop-image-layer {
+            position: absolute; width: 100%; height: 100%;
+            object-fit: cover; filter: blur(15px) brightness(0.4);
+            opacity: 0; transform: scale(1.15) rotate(-0.5deg);
+            transition: opacity 2s ease, transform 12s cubic-bezier(0.1, 0.7, 0.3, 1);
+        }
+        body.theme-sweet-active .backdrop-image-layer { filter: blur(6px) brightness(0.97); }
+        .backdrop-image-layer.active-layer { opacity: 1; transform: scale(1.03) rotate(0deg); }
+
+        .app-window-container {
+            position: relative; z-index: 10;
+            width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            padding: 24px;
+        }
+
+        .quantum-glass-panel {
+            background: var(--panel-cyber);
+            backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+            border: 1px solid var(--border-cyber);
+            border-radius: 40px; padding: 40px;
+            width: 100%; max-width: 480px; text-align: center;
+            box-shadow: 0 35px 70px rgba(0,0,0,0.8), inset 0 0 25px rgba(255,255,255,0.01);
+            transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            transform: translateY(0) scale(1);
+        }
+        body.theme-sweet-active .quantum-glass-panel {
+            background: var(--panel-sweet);
+            border: 1px solid var(--border-sweet);
+            box-shadow: var(--sweet-glow);
+        }
+
+        h1.primary-title-node {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem; font-weight: 900; margin-bottom: 25px;
+            color: var(--accent-cyber); text-shadow: var(--neon-glow);
+            letter-spacing: 4px; text-transform: uppercase;
+        }
+        body.theme-sweet-active h1.primary-title-node {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--accent-sweet); text-shadow: none; font-weight: 800; letter-spacing: 0px;
+        }
+
+        .terminal-input {
+            width: 100%; padding: 18px 24px; border-radius: 20px;
+            border: 1px solid var(--border-cyber);
+            background: rgba(0, 0, 0, 0.7); color: #ffffff;
+            margin-bottom: 20px; outline: none; font-size: 1rem;
+            transition: all 0.3s ease; text-align: center;
+            font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
+        }
+        .terminal-input:focus {
+            border-color: var(--accent-cyber); box-shadow: var(--neon-glow);
+            background: rgba(0,0,0,0.9);
+        }
+        body.theme-sweet-active .terminal-input {
+            background: rgba(255, 255, 255, 0.9); color: #222;
+            border: 1px solid var(--border-sweet); font-family: inherit; letter-spacing: 0px;
+        }
+
+        .system-action-btn {
+            width: 100%; padding: 20px; border-radius: 20px;
+            border: none; background: linear-gradient(135deg, #00f0ff 0%, #0055ff 100%);
+            color: #000000; font-weight: 900; cursor: pointer; font-size: 0.95rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            letter-spacing: 2px; font-family: 'Orbitron', sans-serif;
+            box-shadow: 0 8px 20px rgba(0, 240, 255, 0.25);
+        }
+        .system-action-btn:hover {
+            transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0, 240, 255, 0.45);
+        }
+        body.theme-sweet-active .system-action-btn {
+            background: linear-gradient(135deg, #ff758f 0%, #ff477e 100%);
+            color: #ffffff; font-family: inherit; letter-spacing: 1px;
+            box-shadow: 0 8px 20px rgba(255, 71, 126, 0.3);
+        }
+
+        .upload-dashed-plate {
+            display: block; margin-bottom: 25px; text-align: center;
+            padding: 24px; border: 2px dashed rgba(0, 240, 255, 0.3);
+            border-radius: 20px; cursor: pointer; transition: all 0.3s;
+            font-size: 0.95rem; font-weight: 700; color: #8e8ea8;
+            line-height: 1.5;
+        }
+        .upload-dashed-plate:hover {
+            background: rgba(0, 240, 255, 0.05); border-color: var(--accent-cyber); color: #fff;
+        }
+        body.theme-sweet-active .upload-dashed-plate {
+            border: 2px dashed rgba(255, 71, 126, 0.4); color: #5c5c6b;
+        }
+        body.theme-sweet-active .upload-dashed-plate:hover {
+            background: rgba(255, 71, 126, 0.05); border-color: var(--accent-sweet); color: var(--accent-sweet);
+        }
+
+        .stage-dash-header {
+            display: flex; justify-content: space-between; margin-bottom: 25px;
+            font-family: 'Share Tech Mono', monospace; font-size: 0.85rem;
+            color: #797994; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;
+        }
+        body.theme-sweet-active .stage-dash-header {
+            font-family: inherit; color: #555; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .meta-value { color: var(--accent-cyber); font-weight: bold; }
+        body.theme-sweet-active .meta-value { color: var(--accent-sweet); }
+
+        .balloon-game-container {
+            width: 100%; aspect-ratio: 1.1; background: rgba(0,0,0,0.4);
+            border-radius: 24px; border: 1px solid var(--accent-cyber-dim);
+            position: relative; overflow: hidden;
+        }
+        body.theme-sweet-active .balloon-game-container {
+            background: rgba(0,0,0,0.02); border: 1px solid var(--accent-sweet-dim);
+        }
+
+        .balloon-interactive-element {
+            position: absolute; width: 50px; height: 62px;
+            background: radial-gradient(circle at 30% 30%, #ff477e 0%, #c1121f 100%);
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            cursor: pointer; transform: translateX(-50%);
+            animation: floatingWobble 1.5s ease-in-out infinite alternate;
+            box-shadow: inset -4px -6px 12px rgba(0,0,0,0.25);
+            transition: transform 0.1s ease;
+        }
+        .balloon-interactive-element::after {
+            content: ''; position: absolute; bottom: -6px; left: 50%;
+            transform: translateX(-50%); width: 0; height: 0;
+            border-left: 5px solid transparent; border-right: 5px solid transparent;
+            border-bottom: 7px solid #c1121f;
+        }
+        .balloon-interactive-element::before {
+            content: ''; position: absolute; bottom: -20px; left: 50%;
+            width: 2px; height: 16px; background: rgba(255,255,255,0.25);
+        }
+
+        @keyframes floatingWobble {
+            0% { margin-left: -5px; }
+            100% { margin-left: 5px; }
+        }
+
+        .progress-metrics-lane {
+            width: 100%; height: 12px; background: rgba(255,255,255,0.05);
+            border-radius: 10px; margin-top: 20px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        body.theme-sweet-active .progress-metrics-lane { background: rgba(0,0,0,0.05); }
+        .progress-fill-indicator {
+            width: 0%; height: 100%;
+            background: linear-gradient(90deg, #00f0ff 0%, #0055ff 100%);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body.theme-sweet-active .progress-fill-indicator {
+            background: linear-gradient(90deg, #ff758f 0%, #ff477e 100%);
+        }
+
+        .tab-navigation-strip {
+            display: flex; gap: 8px; margin-bottom: 25px;
+            border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px;
+        }
+        .tab-link-node {
+            flex: 1; padding: 12px; background: none; border: none;
+            color: #83839c; font-weight: 700; cursor: pointer; border-radius: 10px;
+            font-size: 0.85rem; letter-spacing: 0.5px; transition: all 0.3s;
+        }
+        .tab-link-node.active-tab-node {
+            background: var(--accent-sweet-bg); color: var(--accent-sweet);
+        }
+
+        .scrollable-letter-well {
+            background: rgba(255, 255, 255, 0.98); padding: 25px; border-radius: 24px;
+            height: 220px; overflow-y: auto; text-align: left;
+            color: #2b2d42; font-size: 0.95rem; line-height: 1.6; font-weight: 600;
+            border: 1px solid rgba(255, 71, 126, 0.12);
+            box-shadow: inset 0 4px 16px rgba(0,0,0,0.03);
+        }
+
+        .instagram-grid-container {
+            width: 100%; height: 220px; overflow-y: auto;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+            padding: 4px; background: #ffffff; border-radius: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .instagram-grid-item {
+            width: 100%; aspect-ratio: 1; overflow: hidden;
+            position: relative; background: #fafafa; border-radius: 4px;
+        }
+        .instagram-grid-item img {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        .instagram-grid-item:hover img {
+            transform: scale(1.05);
+        }
+
+        @keyframes widgetBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="audio-controller-node" id="app-visualizer-bars">
+        <div class="visualizer-bar"></div>
+        <div class="visualizer-bar"></div>
+        <div class="visualizer-bar"></div>
+        <div class="visualizer-bar"></div>
+    </div>
+    <button class="hardware-mute-btn" id="app-audio-switch">🎵</button>
+
+    <canvas id="matrix-rain-core"></canvas>
+    <canvas id="particle-ambient-core"></canvas>
+    <div class="cinematic-backdrop-viewport" id="app-cinematic-backdrop"></div>
+    <div class="system-scanlines"></div>
+
+    <div class="app-window-container">
+        
+        <!-- ================= STAGE 00: PORTAL UTAMA ================= -->
+        <div class="quantum-glass-panel" id="viewport-stage-portal">
+            <h1 class="primary-title-node">Core Decryptor</h1>
+            <div style="font-family:'Share Tech Mono', monospace; font-size:0.8rem; color:#6b6b8a; margin-top:-18px; margin-bottom:25px;">
+                SYSTEM INITIALIZATION PROTOCOL v16
+            </div>
+            
+            <input type="text" id="target-identity-field" class="terminal-input" placeholder="[ MASUKKAN NAMA LENGKAP ]" autocomplete="off" maxlength="40">
+            
+            <label for="mass-file-broker" class="upload-dashed-plate" id="upload-feedback-string">
+                📁 Pilih beberapa foto untuk profil<br>
+                <span style="font-size:0.75rem; opacity:0.65; font-weight:400; display:block; margin-top:5px;">
+                    (Tahan & pilih sekaligus banyak foto di galeri HP agar tidak keriset)
+                </span>
+            </label>
+            <input type="file" id="mass-file-broker" multiple accept="image/*" style="display: none;">
+            
+            <button class="system-action-btn" id="trigger-dechaining-sequence">ENGAGE FIREWALL OVERRIDE ⚡</button>
+        </div>
+
+        <!-- ================= STAGE 01: MINI-GAME BALON SIMPEL ================= -->
+        <div class="quantum-glass-panel" id="viewport-stage-balloon-game" style="display:none; opacity:0;">
+            <div class="stage-dash-header">
+                <div>NAMA: <span id="game-target-meta" class="meta-value">---</span></div>
+                <div>INTEGRITY: <span id="game-progress-text" class="meta-value">0%</span></div>
+            </div>
+            
+            <h1 class="primary-title-node" style="font-size:1.3rem; margin-bottom:8px; letter-spacing:1px;">Pop The Balloons</h1>
+            <p style="font-size:0.8rem; color:#8787a6; margin-bottom:20px;">Ketuk balon-balon untuk memecahkan enkripsi data memori.</p>
+            
+            <div class="balloon-game-container" id="balloon-interaction-workspace"></div>
+            
+            <div class="progress-metrics-lane">
+                <div class="progress-fill-indicator" id="game-bar-indicator"></div>
+            </div>
+        </div>
+
+        <!-- ================= STAGE 02: HALAMAN SURPRISE & SELEBRASI ================= -->
+        <div class="quantum-glass-panel" id="viewport-stage-celebration" style="display:none; opacity:0;">
+            <div style="font-size: 3.2rem; animation: widgetBounce 2s infinite; margin-bottom:10px;">👑</div>
+            
+            <h1 class="primary-title-node" style="letter-spacing:1px;">HBD FRIEND </h1>
+            
+            <div class="tab-navigation-strip">
+                <button class="tab-link-node active-tab-node" id="trigger-tab-letter">THE LETTER</button>
+                <button class="tab-link-node" id="trigger-tab-polaroid">MEMORY GALLERY</button>
+            </div>
+
+            <div class="wrapper-tab-pane" id="pane-tab-letter">
+                <div class="scrollable-letter-well" id="typewriter-wish-target"></div>
+            </div>
+
+            <div class="wrapper-tab-pane" id="pane-tab-polaroid" style="display:none;">
+                <div class="instagram-grid-container" id="instagram-grid-space"></div>
+                <div style="font-size:0.75rem; color:#7e7e94; margin-top:12px; font-weight:600;">
+                    ✨ Grid Galeri Eksklusif Foto Pilihan Awal
+                </div>
+            </div>
+
+            <button class="system-action-btn" style="margin-top:25px;" onclick="location.reload()">RE-EXECUTE SYSTEM CHAINS</button>
+        </div>
+
+    </div>
+
+    <script>
+        let memoryBufferImages = [];
+        const fallbacksStockImages = [
+            "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=500",
+            "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=500"
+        ];
+
+        const matrixCanvasNode = document.getElementById('matrix-rain-core');
+        const matrixCtx = matrixCanvasNode.getContext('2d');
+        const ambientCanvasNode = document.getElementById('particle-ambient-core');
+        const ambientCtx = ambientCanvasNode.getContext('2d');
+
+        let displayWidth = matrixCanvasNode.width = ambientCanvasNode.width = window.innerWidth;
+        let displayHeight = matrixCanvasNode.height = ambientCanvasNode.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            displayWidth = matrixCanvasNode.width = ambientCanvasNode.width = window.innerWidth;
+            displayHeight = matrixCanvasNode.height = ambientCanvasNode.height = window.innerHeight;
+            generateMatrixColumnsMetrics();
+        });
+
+        const matrixGlyphSymbols = "01010101METADATASTRUCTURESYSTEMDECRYPTORFIREWALLPASSEDSECURITY";
+        const matrixFontUnits = 12;
+        let matrixColumnsArray = [];
+
+        function generateMatrixColumnsMetrics() {
+            const calculatedCols = Math.floor(displayWidth / matrixFontUnits) + 1;
+            matrixColumnsArray = Array(calculatedCols).fill(1);
+        }
+        generateMatrixColumnsMetrics();
+
+        function stepMatrixRainGraphics() {
+            matrixCtx.fillStyle = 'rgba(2, 2, 5, 0.05)';
+            matrixCtx.fillRect(0, 0, displayWidth, displayHeight);
+            matrixCtx.fillStyle = '#00f0ff';
+            matrixCtx.font = matrixFontUnits + 'px monospace';
+
+            for (let index = 0; index < matrixColumnsArray.length; index++) {
+                const randomGlyph = matrixGlyphSymbols.charAt(Math.floor(Math.random() * matrixGlyphSymbols.length));
+                matrixCtx.fillText(randomGlyph, index * matrixFontUnits, matrixColumnsArray[index] * matrixFontUnits);
+                
+                if (matrixColumnsArray[index] * matrixFontUnits > displayHeight && Math.random() > 0.98) {
+                    matrixColumnsArray[index] = 0;
+                }
+                matrixColumnsArray[index]++;
+            }
+        }
+
+        let physicalParticlesSet = [];
+        for (let idx = 0; idx < 65; idx++) {
+            physicalParticlesSet.push({
+                xCoord: Math.random() * displayWidth,
+                yCoord: Math.random() * displayHeight,
+                radiusSize: Math.random() * 2.5 + 1,
+                fallVelocity: Math.random() * 0.7 + 0.2,
+                driftVelocity: Math.random() * 0.4 - 0.2
+            });
+        }
+
+        function stepAmbientParticlesGraphics() {
+            ambientCtx.clearRect(0, 0, displayWidth, displayHeight);
+            const isSweetThemeEnabled = document.body.classList.contains('theme-sweet-active');
+
+            physicalParticlesSet.forEach(part => {
+                ambientCtx.beginPath();
+                if (isSweetThemeEnabled) {
+                    ambientCtx.fillStyle = `rgba(255, 71, 126, ${Math.random() * 0.3 + 0.5})`;
+                    ambientCtx.arc(part.xCoord, part.yCoord, part.radiusSize + 1, 0, Math.PI * 2);
+                } else {
+                    ambientCtx.fillStyle = 'rgba(0, 240, 255, 0.35)';
+                    ambientCtx.rect(part.xCoord, part.yCoord, part.radiusSize * 1.5, part.radiusSize * 1.5);
+                }
+                ambientCtx.fill();
+
+                part.yCoord += part.fallVelocity;
+                part.xCoord += part.driftVelocity;
+
+                if (part.yCoord > displayHeight) part.yCoord = 0;
+                if (part.xCoord > displayWidth || part.xCoord < 0) part.xCoord = Math.random() * displayWidth;
+            });
+        }
+
+        function globalRenderTickLoop() {
+            if (!document.body.classList.contains('theme-sweet-active')) {
+                stepMatrixRainGraphics();
+            }
+            stepAmbientParticlesGraphics();
+            requestAnimationFrame(globalRenderTickLoop);
+        }
+        globalRenderTickLoop();
+
+        let hardwareAudioContext = null;
+        let isSystemAudioMuted = true;
+        let schedulerSequencerTimer = null;
+
+        function runSystemAudioHardware() {
+            hardwareAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            isSystemAudioMuted = false;
+            document.getElementById('app-visualizer-bars').classList.add('playing');
+            
+            const minorCyberScale = [98, 116, 130, 146, 164, 196, 220, 293];
+            const majorSweetScale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+            let sequenceStepIdx = 0;
+
+            schedulerSequencerTimer = setInterval(() => {
+                if (isSystemAudioMuted) return;
+
+                const checkSweetState = document.body.classList.contains('theme-sweet-active');
+                let oscillatorCore = hardwareAudioContext.createOscillator();
+                let masterVolumeNode = hardwareAudioContext.createGain();
+
+                oscillatorCore.type = checkSweetState ? 'sine' : 'triangle';
+                let scaleInUse = checkSweetState ? majorSweetScale : minorCyberScale;
+                let coreFrequency = scaleInUse[sequenceStepIdx % scaleInUse.length];
+
+                if (!checkSweetState && sequenceStepIdx % 4 === 0) {
+                    coreFrequency = coreFrequency * 0.5;
+                }
+
+                oscillatorCore.frequency.setValueAtTime(coreFrequency, hardwareAudioContext.currentTime);
+                masterVolumeNode.gain.setValueAtTime(checkSweetState ? 0.05 : 0.03, hardwareAudioContext.currentTime);
+                masterVolumeNode.gain.exponentialRampToValueAtTime(0.0001, hardwareAudioContext.currentTime + 0.45);
+
+                oscillatorCore.connect(masterVolumeNode);
+                masterVolumeNode.connect(hardwareAudioContext.destination);
+
+                oscillatorCore.start();
+                oscillatorCore.stop(hardwareAudioContext.currentTime + 0.45);
+                sequenceStepIdx++;
+            }, 260);
+        }
+
+        function dispatchProgrammaticSoundNotification(isActionSuccessful) {
+            if (!hardwareAudioContext || isSystemAudioMuted) return;
+
+            let soundOscNode = hardwareAudioContext.createOscillator();
+            let soundGainNode = hardwareAudioContext.createGain();
+
+            soundOscNode.type = 'sine';
+            soundOscNode.frequency.setValueAtTime(isActionSuccessful ? 523.25 : 146.83, hardwareAudioContext.currentTime);
+            if (isActionSuccessful) {
+                soundOscNode.frequency.setValueAtTime(783.99, hardwareAudioContext.currentTime + 0.07);
+            }
+
+            soundGainNode.gain.setValueAtTime(0.08, hardwareAudioContext.currentTime);
+            soundGainNode.gain.exponentialRampToValueAtTime(0.001, hardwareAudioContext.currentTime + 0.3);
+
+            soundOscNode.connect(soundGainNode);
+            soundGainNode.connect(hardwareAudioContext.destination);
+
+            soundOscNode.start();
+            soundOscNode.stop(hardwareAudioContext.currentTime + 0.3);
+        }
+
+        function performAudioToggleMuteSequence() {
+            const visualBarsWidget = document.getElementById('app-visualizer-bars');
+            if (!hardwareAudioContext) {
+                runSystemAudioHardware();
+                return;
+            }
+            if (isSystemAudioMuted) {
+                isSystemAudioMuted = false;
+                visualBarsWidget.classList.add('playing');
+                document.getElementById('app-audio-switch').innerText = "🔊";
+            } else {
+                isSystemAudioMuted = true;
+                visualBarsWidget.classList.remove('playing');
+                document.getElementById('app-audio-switch').innerText = "🔇";
+            }
+        }
+        document.getElementById('app-audio-switch').addEventListener('click', performAudioToggleMuteSequence);
+        document.getElementById('app-visualizer-bars').addEventListener('click', performAudioToggleMuteSequence);
+
+        const fileBrokerInput = document.getElementById('mass-file-broker');
+        fileBrokerInput.addEventListener('change', (eventStack) => {
+            const operationalFilesList = eventStack.target.files;
+            memoryBufferImages = [];
+            
+            if (operationalFilesList.length > 0) {
+                let loadedCount = 0;
+                Array.from(operationalFilesList).forEach(fileObj => {
+                    const fileReaderInstance = new FileReader();
+                    fileReaderInstance.onload = (readEvent) => {
+                        memoryBufferImages.push(readEvent.target.result);
+                        loadedCount++;
+                        if (loadedCount === operationalFilesList.length) {
+                            document.getElementById('upload-feedback-string').innerHTML = `✅ ${memoryBufferImages.length} FOTO BERHASIL DI-LOAD`;
+                        }
+                    };
+                    fileReaderInstance.readAsDataURL(fileObj);
+                });
+            }
+        });
+
+        function mountBackdropSlideshowSlides(sourceArray) {
+            const frameContainer = document.getElementById('app-cinematic-backdrop');
+            frameContainer.innerHTML = '';
+
+            sourceArray.forEach((sourceUrl, baseIdx) => {
+                const layerDomNode = document.createElement('img');
+                layerDomNode.src = sourceUrl;
+                layerDomNode.classList.add('backdrop-image-layer');
+                if (baseIdx === 0) layerDomNode.classList.add('active-layer');
+                frameContainer.appendChild(layerDomNode);
+            });
+
+            let currentActiveLayerIndex = 0;
+            setInterval(() => {
+                const activeLayersInDom = frameContainer.querySelectorAll('.backdrop-image-layer');
+                if (activeLayersInDom.length <= 1) return;
+                
+                activeLayersInDom[currentActiveLayerIndex].classList.remove('active-layer');
+                currentActiveLayerIndex = (currentActiveLayerIndex + 1) % activeLayersInDom.length;
+                activeLayersInDom[currentActiveLayerIndex].classList.add('active-layer');
+            }, 5500);
+        }
+
+        function executeStageScreenTransition(outboundElementId, inboundElementId, completeCallback) {
+            const outboundComponent = document.getElementById(outboundElementId);
+            const inboundComponent = document.getElementById(inboundElementId);
+
+            outboundComponent.style.transform = 'scale(0.92) translateY(30px)';
+            outboundComponent.style.opacity = '0';
+
+            setTimeout(() => {
+                outboundComponent.style.display = 'none';
+                inboundComponent.style.display = 'block';
+                
+                if (completeCallback) completeCallback();
+
+                setTimeout(() => {
+                    inboundComponent.style.transform = 'scale(1) translateY(0)';
+                    inboundComponent.style.opacity = '1';
+                }, 50);
+            }, 750);
+        }
+
+        const actionButtonStart = document.getElementById('trigger-dechaining-sequence');
+        actionButtonStart.addEventListener('click', () => {
+            const valueInputName = document.getElementById('target-identity-field').value.trim();
+            if (!valueInputName) {
+                alert("Masukkan nama lengkap terlebih dahulu.");
+                return;
+            }
+
+            if (!hardwareAudioContext) runSystemAudioHardware();
+
+            let evaluationImagesGroup = memoryBufferImages.length > 0 ? memoryBufferImages : fallbacksStockImages;
+            mountBackdropSlideshowSlides(evaluationImagesGroup);
+
+            executeStageScreenTransition('viewport-stage-portal', 'viewport-stage-balloon-game', () => {
+                initializeBalloonMiniGameEngine();
+            });
+        });
+
+        let gameProgressPercentage = 0;
+        let balloonSpawnTimerInstance = null;
+        const workspaceBoardDomNode = document.getElementById('balloon-interaction-workspace');
+
+        function initializeBalloonMiniGameEngine() {
+            const signatureTargetString = document.getElementById('target-identity-field').value;
+            document.getElementById('game-target-meta').innerText = signatureTargetString.toUpperCase();
+            
+            workspaceBoardDomNode.innerHTML = '';
+            gameProgressPercentage = 0;
+            refreshGameProgressStateMetrics();
+
+            balloonSpawnTimerInstance = setInterval(() => {
+                if (gameProgressPercentage < 100) {
+                    generateInteractiveBalloonElementNode();
+                }
+            }, 700);
+
+            for(let seed = 0; seed < 3; seed++) {
+                generateInteractiveBalloonElementNode();
+            }
+        }
+
+        function generateInteractiveBalloonElementNode() {
+            if (gameProgressPercentage >= 100) return;
+
+            const balloonDomNode = document.createElement('div');
+            balloonDomNode.classList.add('balloon-interactive-element');
+
+            const dynamicHuePalette = [
+                'radial-gradient(circle at 30% 30%, #ff477e 0%, #b5179e 100%)',
+                'radial-gradient(circle at 30% 30%, #00f0ff 0%, #3a0ca3 100%)',
+                'radial-gradient(circle at 30% 30%, #72efdd 0%, #0077b6 100%)',
+                'radial-gradient(circle at 30% 30%, #ffb703 0%, #fb8500 100%)'
+            ];
+            balloonDomNode.style.background = dynamicHuePalette[Math.floor(Math.random() * dynamicHuePalette.length)];
+
+            const widthBoundLimits = workspaceBoardDomNode.clientWidth - 60;
+            const randomizedXCoordinate = Math.random() * widthBoundLimits + 30;
+            balloonDomNode.style.left = `${randomizedXCoordinate}px`;
+            
+            let initialYPositionOffset = workspaceBoardDomNode.clientHeight + 40;
+            balloonDomNode.style.top = `${initialYPositionOffset}px`;
+
+            workspaceBoardDomNode.appendChild(balloonDomNode);
+
+            let upwardMotionSpeedVelocity = Math.random() * 1.8 + 1.2;
+            
+            function executionBalloonPhysicsAnimationTick() {
+                if (!balloonDomNode.parentElement) return;
+                
+                initialYPositionOffset -= upwardMotionSpeedVelocity;
+                balloonDomNode.style.top = `${initialYPositionOffset}px`;
+
+                if (initialYPositionOffset < -80) {
+                    balloonDomNode.remove();
+                } else {
+                    requestAnimationFrame(executionBalloonPhysicsAnimationTick);
+                }
+            }
+            requestAnimationFrame(executionBalloonPhysicsAnimationTick);
+
+            balloonDomNode.addEventListener('mousedown', processBalloonPoppedGesture);
+            balloonDomNode.addEventListener('touchstart', processBalloonPoppedGesture, { passive: true });
+        }
+
+        function processBalloonPoppedGesture(eventInstance) {
+            eventInstance.preventDefault();
+            dispatchProgrammaticSoundNotification(true);
+            
+            this.style.transform = 'scale(1.4)';
+            this.style.opacity = '0';
+            
+            this.removeEventListener('mousedown', processBalloonPoppedGesture);
+            this.removeEventListener('touchstart', processBalloonPoppedGesture);
+
+            setTimeout(() => {
+                this.remove();
+            }, 90);
+
+            gameProgressPercentage += 15; 
+            if (gameProgressPercentage > 100) gameProgressPercentage = 100;
+
+            refreshGameProgressStateMetrics();
+
+            if (gameProgressPercentage >= 100) {
+                clearInterval(balloonSpawnTimerInstance);
+                setTimeout(() => {
+                    executeStageScreenTransition('viewport-stage-balloon-game', 'viewport-stage-celebration', () => {
+                        triggerUltimateCelebrationDisplay();
+                    });
+                }, 800);
+            }
+        }
+
+        function refreshGameProgressStateMetrics() {
+            document.getElementById('game-progress-text').innerText = `${gameProgressPercentage}%`;
+            document.getElementById('game-bar-indicator').style.width = `${gameProgressPercentage}%`;
+        }
+
+        function triggerUltimateCelebrationDisplay() {
+            document.body.classList.add('theme-sweet-active');
+            executeDynamicTypewriterLetterAnimation();
+            mountInstagramGridGallery();
+        }
+
+        const nodeTabLetter = document.getElementById('trigger-tab-letter');
+        const nodeTabPolaroid = document.getElementById('trigger-tab-polaroid');
+
+        const blockPaneLetter = document.getElementById('pane-tab-letter');
+        const blockPanePolaroid = document.getElementById('pane-tab-polaroid');
+
+        function clearCelebrationDisplayPanesStates() {
+            [nodeTabLetter, nodeTabPolaroid].forEach(btn => btn.classList.remove('active-tab-node'));
+            [blockPaneLetter, blockPanePolaroid].forEach(pane => pane.style.display = 'none');
+        }
+
+        nodeTabLetter.addEventListener('click', () => { 
+            clearCelebrationDisplayPanesStates(); 
+            nodeTabLetter.classList.add('active-tab-node'); 
+            blockPaneLetter.style.display = 'block'; 
+            executeDynamicTypewriterLetterAnimation(); // Memicu ulang efek ketik dengan aman
+        });
+        
+        nodeTabPolaroid.addEventListener('click', () => { 
+            clearCelebrationDisplayPanesStates(); 
+            nodeTabPolaroid.classList.add('active-tab-node'); 
+            blockPanePolaroid.style.display = 'block'; 
+        });
+
+        // LOCK SYSTEM & RESET PROTOCOL UNTUK MENCEGAH HURUF BALAPAN
+        let isTypewriterRunning = false; 
+        let currentTimeoutInstance = null;
+
+        function executeDynamicTypewriterLetterAnimation() {
+            const inputFullName = document.getElementById('target-identity-field').value;
+            const containerTextWell = document.getElementById('typewriter-wish-target');
+            
+            const internalTextCorpus = `Selamat ulang tahun untuk ${inputFullName}.\n\nSemoga di usia yang baru ini kamu senantiasa diberikan kesehatan yang prima, kebahagiaan yang melimpah, serta perlindungan dalam setiap langkah. Semoga segala impian, rencana besar, dan cita-cita yang sedang diperjuangkan saat ini bisa segera terwujud dengan hasil yang terbaik. Selamat merayakan hari spesialmu!`;
+
+            // Jika sedang berjalan, batalkan timeout sebelumnya agar tidak tabrakan
+            if (currentTimeoutInstance) {
+                clearTimeout(currentTimeoutInstance);
+            }
+
+            let streamTextIdx = 0;
+            containerTextWell.innerHTML = ''; // Reset tampilan box tulisan jadi kosong dulu
+
+            function runTypewriterTick() {
+                if (streamTextIdx < internalTextCorpus.length) {
+                    const currentCharter = internalTextCorpus.charAt(streamTextIdx);
+                    if (currentCharter === '\n') {
+                        containerTextWell.innerHTML += '<br>';
+                    } else {
+                        containerTextWell.innerHTML += currentCharter;
+                    }
+                    streamTextIdx++;
+                    containerTextWell.scrollTop = containerTextWell.scrollHeight;
+                    currentTimeoutInstance = setTimeout(runTypewriterTick, 35);
+                } else {
+                    isTypewriterRunning = false; // Efek selesai berjalan secara normal
+                }
+            }
+            
+            isTypewriterRunning = true;
+            runTypewriterTick();
+        }
+
+        function mountInstagramGridGallery() {
+            const gridContainer = document.getElementById('instagram-grid-space');
+            gridContainer.innerHTML = '';
+
+            let executionImagesPool = memoryBufferImages.length > 0 ? memoryBufferImages : fallbacksStockImages;
+
+            executionImagesPool.forEach((imgSrcPath) => {
+                const gridItem = document.createElement('div');
+                gridItem.classList.add('instagram-grid-item');
+                gridItem.innerHTML = `<img src="${imgSrcPath}" alt="instagram-feed-style">`;
+                gridContainer.appendChild(gridItem);
+            });
+        }
+    </script>
+</body>
+</html>
